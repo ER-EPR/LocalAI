@@ -7,10 +7,10 @@ FROM ${BASE_IMAGE} as requirements-core
 USER root
 
 ARG GO_VERSION=1.21.7
-ARG BUILD_TYPE
-ARG CUDA_MAJOR_VERSION=11
-ARG CUDA_MINOR_VERSION=7
-ARG TARGETARCH
+ARG BUILD_TYPE=cublas
+ARG CUDA_MAJOR_VERSION=12
+ARG CUDA_MINOR_VERSION=3
+ARG TARGETARCH=amd64
 ARG TARGETVARIANT
 
 ENV BUILD_TYPE=${BUILD_TYPE}
@@ -36,7 +36,7 @@ RUN echo "Target Variant: $TARGETVARIANT"
 # CuBLAS requirements
 RUN if [ "${BUILD_TYPE}" = "cublas" ]; then \
     apt-get install -y software-properties-common && \
-    curl -O https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
     rm -f cuda-keyring_1.1-1_all.deb && \
     apt-get update && \
@@ -67,7 +67,7 @@ RUN test -n "$TARGETARCH" \
 ###################################
 
 FROM requirements-core as requirements-extras
-
+ENV https_proxy="http://192.168.48.50:20172"
 RUN curl https://repo.anaconda.com/pkgs/misc/gpgkeys/anaconda.asc | gpg --dearmor > conda.gpg && \
     install -o root -g root -m 644 conda.gpg /usr/share/keyrings/conda-archive-keyring.gpg && \
     gpg --keyring /usr/share/keyrings/conda-archive-keyring.gpg --no-default-keyring --fingerprint 34161F5BF5EB1D4BFBBB8F0A8AEB4F8B29D82806 && \
@@ -92,7 +92,7 @@ RUN if [ ! -e /usr/bin/python ]; then \
 
 FROM requirements-${IMAGE_TYPE} as builder
 
-ARG GO_TAGS="stablediffusion tts"
+ARG GO_TAGS="stablediffusion tinydream tts"
 ARG GRPC_BACKENDS
 ARG BUILD_GRPC=true
 ARG MAKEFLAGS
@@ -103,11 +103,13 @@ ENV MAKEFLAGS=${MAKEFLAGS}
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ENV NVIDIA_REQUIRE_CUDA="cuda>=${CUDA_MAJOR_VERSION}.0"
 ENV NVIDIA_VISIBLE_DEVICES=all
-
+ENV http_proxy="http://192.168.48.50:20172"
+ENV https_proxy="http://192.168.48.50:20172"
 WORKDIR /build
 
 COPY . .
 COPY .git .
+RUN git config --global https.proxy "http://192.168.48.50:20172" && go env -w GOPROXY=https://goproxy.cn,direct && make prepare
 RUN echo "GO_TAGS: $GO_TAGS"
 RUN make prepare
 
@@ -141,9 +143,9 @@ RUN if [ ! -d "/build/sources/go-piper/piper-phonemize/pi/lib/" ]; then \
 
 FROM requirements-${IMAGE_TYPE}
 
-ARG FFMPEG
-ARG BUILD_TYPE
-ARG TARGETARCH
+ARG FFMPEG=true
+ARG BUILD_TYPE=cublas
+ARG TARGETARCH=amd64
 ARG IMAGE_TYPE=extras
 ARG MAKEFLAGS
 
@@ -152,7 +154,7 @@ ENV REBUILD=false
 ENV HEALTHCHECK_ENDPOINT=http://localhost:8080/readyz
 ENV MAKEFLAGS=${MAKEFLAGS}
 
-ARG CUDA_MAJOR_VERSION=11
+ARG CUDA_MAJOR_VERSION=12
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ENV NVIDIA_REQUIRE_CUDA="cuda>=${CUDA_MAJOR_VERSION}.0"
 ENV NVIDIA_VISIBLE_DEVICES=all
