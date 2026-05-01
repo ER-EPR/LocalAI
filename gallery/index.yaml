@@ -2237,6 +2237,8 @@
   url: "github:mudler/LocalAI/gallery/virtual.yaml@master"
   urls:
     - https://huggingface.co/mradermacher/Qwen3-VL-Reranker-8B-GGUF
+  tags:
+    - reranker
   description: |
     **Model Name:** Qwen3-VL-Reranker-8B
     **Base Model:** Qwen/Qwen3-VL-Reranker-8B
@@ -2290,6 +2292,8 @@
   url: "github:mudler/LocalAI/gallery/virtual.yaml@master"
   urls:
     - https://huggingface.co/mradermacher/Qwen3-VL-Reranker-2B-i1-GGUF
+  tags:
+    - reranker
   description: |
     **Model Name:** Qwen3-VL-Reranker-2B-i1
     **Base Model:** Qwen/Qwen3-VL-Reranker-2B
